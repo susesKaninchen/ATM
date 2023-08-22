@@ -127,9 +127,9 @@ void pngDraw(PNGDRAW *pDraw) {
   tft.pushImage(xpos, ypos + pDraw->y, pDraw->iWidth, 1, lineBuffer);
 }
 
-void drawMyLogo() {
+void drawMyLogo(const char* name = "/logo.png") {
   // Pass support callback function names to library
-  int16_t rc = png.open("/logo.png", pngOpen, pngClose, pngRead, pngSeek, pngDraw);
+  int16_t rc = png.open(name, pngOpen, pngClose, pngRead, pngSeek, pngDraw);
   if (rc == PNG_SUCCESS) {
     tft.startWrite();
     Serial.printf("image specs: (%d x %d), %d bpp, pixel type: %d\n", png.getWidth(), png.getHeight(), png.getBpp(), png.getPixelType());
@@ -274,7 +274,7 @@ void loop() {
   // nach status entscheiden, wa sgemacht wird mit einem stwitch case
   switch (aktuellerStatus) {
   case START:
-    tft.fillScreen(TFT_BLACK); // Clear screen
+    //tft.fillScreen(TFT_BLACK); // Clear screen
     /* code */
     break;
   case IDLE:
@@ -285,9 +285,9 @@ void loop() {
     break;
   case PINFELD:
     if (redraw) {
-      //drawMyLogo();
+      drawMyLogo("/bg.png");
       tft.setCursor(20, 70, 2);
-      tft.fillScreen(TFT_NAVY);
+      //tft.fillScreen(TFT_NAVY);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
@@ -302,9 +302,9 @@ void loop() {
     break; 
   case PIN_FALSCH:
     if (redraw) {
-      //drawMyLogo();
+      drawMyLogo("/bg.png");
       tft.setCursor(20, 70, 2);
-      tft.fillScreen(TFT_NAVY);
+      //tft.fillScreen(TFT_NAVY);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
@@ -316,9 +316,9 @@ void loop() {
     }
   case FRAGEN:
     if (redraw) {
-      //drawMyLogo();
+      drawMyLogo("/bg.png");
       tft.setCursor(20, 70, 2);
-      tft.fillScreen(TFT_NAVY);
+      //tft.fillScreen(TFT_NAVY);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
@@ -332,9 +332,9 @@ void loop() {
     break;
   case KONTO:
     if (redraw) {
-      //drawMyLogo();
+      drawMyLogo("/bg.png");
       tft.setCursor(20, 70, 2);
-      tft.fillScreen(TFT_NAVY);
+      //tft.fillScreen(TFT_NAVY);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
@@ -348,9 +348,9 @@ void loop() {
   case GELDAUSWURF:
   //drawMyLogo(); // MONEY IMAGE
     if (redraw) {
-      //drawMyLogo();
+      drawMyLogo("/bg.png");
       tft.setCursor(20, 70, 2);
-      tft.fillScreen(TFT_NAVY);
+      //tft.fillScreen(TFT_NAVY);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
@@ -368,8 +368,8 @@ void loop() {
     break;
   case ENDE:
     if (redraw) {
-      tft.fillScreen(TFT_NAVY);
-    //drawMyLogo(); Bild von uns
+      //tft.fillScreen(TFT_NAVY);
+    drawMyLogo("/bg.png");
     tft.setCursor(20, 70, 2);
     tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
       tft.println("Eine tolle Hochzeit wuenschen euch Gina, Marco, Max, Jake und Andre");
