@@ -6,6 +6,12 @@
 #include <TFT_eSPI.h> // Hardware-specific library
 #include <SPI.h>
 #include <PNGdec.h>
+#include <HardwareSerial.h>
+#include <JQ6500_Serial.h>
+HardwareSerial mySerial(1);
+JQ6500_Serial mp3(1);
+
+
 PNG png;
 #define MAX_IMAGE_WIDTH 480 // Adjust for your images
 int16_t xpos = 0;
@@ -19,16 +25,20 @@ TFT_eSPI tft = TFT_eSPI();                   // Invoke custom library with defau
 
 unsigned long drawTime = 0;
 //ENUM status, Start, IDLE, Pin Feld, Fragen, Konto, Geldauswurf, ENDE
-enum status {START, IDLE, PINFELD, PIN_FALSCH, FRAGEN, KONTO, GELDAUSWURF, ENDE};
+enum status {START, IDLE, PINFELD, PIN_FALSCH, PIN_VERGESSEN, FRAGEN, FRAGE_RICHTIG, FRAGE_FALSCH, CAPTCHA, KONTO, GELDAUSWURF, ENDE};
 status aktuellerStatus = START;
 int aktuelleFrage = 0;
+int captcha_counter = 0;
+//BG Color
+uint16_t bg_color = 0x3758;//0x471A;
 
 //Fragen
-String fragen[5] = {"Wann seid ihr nach Luebeck gezogen?", "Wann habt ihr euren Schulabschluss gemacht?", "Wann kam euer 2. Gebohrenes zur Welt? (TTMMYYY)", "Wie viele Jahre seid ihr zusammen?", "In welchen Jahr seid ihr in euer jetziges Haus gezogen?"};
-String antworten[5] = {"2014", "2014", "20022016", "13", "2021"};
+int anzahl_fragen = 6;
+String fragen[6] = {"An welchem Tag seid ihr zusammen gekommen?        (DDMMYYYY)", "Wann habt ihr die Schule abgeschlossen? (YYYY)", "Wann kam euer 2. Geborenes zur Welt?     (TTMMYYY)", "Wie viele Jahre seid ihr zusammen?", "In welchen Jahr seid ihr in euer jetziges Haus gezogen?", "Wann habt ihr euch verlobt? (DDMMYYYY)"};
+String antworten[6] = {"25042010", "2014", "20022016", "13", "2021", "30092022"};
 //Puffer für die Antworten
 String antwortPuffer = "          ";
-String pin = "1 2 3 4 ";
+String pin = "5 2 3 4 ";
 
 // Pins
 #define KARTENPIN 5
@@ -69,7 +79,7 @@ void setup() {
   tft.begin();
 
   tft.setRotation(3);
-  tft.fillScreen(TFT_NAVY); // Clear screen to navy background
+  tft.fillScreen(bg_color); // Clear screen to navy background
   // Initialise FS
   if (!FileSys.begin()) {
     Serial.println("LittleFS initialisation failed!");
@@ -85,6 +95,12 @@ void setup() {
     while(1) yield();
   }
   else Serial.println("\nFonts found OK.");
+mySerial.begin(9600, SERIAL_8N1, 33, 32);
+ mp3.begin(9600);
+  mp3.reset();
+  mp3.setVolume(20);
+  mp3.setLoopMode(MP3_LOOP_NONE);
+  mp3.playFileByIndexNumber(1); 
 }
 
 
@@ -147,6 +163,28 @@ void drawMyLogo(const char* name = "/logo.png") {
   }
 }
 
+// Funktion, to split to long lines
+String splitToLines(String text, int maxLineLength) {
+  String result = "";
+  int lastSpace = -1;
+  int lastLineStart = 0;
+  for (int i = 0; i < text.length(); i++) {
+    if (text.charAt(i) == ' ') {
+      lastSpace = i;
+    }
+    if (i - lastLineStart > maxLineLength) {
+      if (lastSpace == -1) {
+        lastSpace = i;
+      }
+      result = result + text.substring(lastLineStart, lastSpace) + "\n  ";
+      lastLineStart = lastSpace + 1;
+      lastSpace = -1;
+    }
+  }
+  result = result + text.substring(lastLineStart);
+  return result;
+}
+
 void loop() {
   // Prüfen Sie, ob eine Taste gedrückt wurde und welche Taste es war
   bool keyIsPressed = false;
@@ -191,7 +229,7 @@ void loop() {
             antwortPuffer = antwortPuffer + String(keys[r][c]) + " ";
             redraw = true;
           }
-        } else if (aktuellerStatus == PIN_FALSCH) {
+        } else if (aktuellerStatus == PIN_VERGESSEN) {
           if (keys[r][c] == 'E') {
               aktuellerStatus = FRAGEN;
               aktuelleFrage = 0;
@@ -209,12 +247,14 @@ void loop() {
               aktuelleFrage = aktuelleFrage+1;
               redraw = true;
               antwortPuffer = "";
-              if (aktuelleFrage == 5) {
+              aktuellerStatus = FRAGE_RICHTIG;
+              if (aktuelleFrage == anzahl_fragen) {
                 aktuellerStatus = KONTO;
               }
             } else {
-              aktuellerStatus = PIN_FALSCH;
-              aktuelleFrage = 0;
+              aktuellerStatus = FRAGE_FALSCH;
+              //aktuellerStatus = PIN_FALSCH;
+              //aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
             }
@@ -223,6 +263,31 @@ void loop() {
               antwortPuffer = "";
           } else {
             if (antwortPuffer.length() >= 10) {
+              Serial.println("Puffer länge: " + String(antwortPuffer.length()));
+              antwortPuffer = "";
+              Serial.println("Puffer gelöscht");
+            }
+            antwortPuffer = antwortPuffer + String(keys[r][c]);
+            redraw = true;
+          }
+        } else if (aktuellerStatus == CAPTCHA) {
+          if (keys[r][c] == 'E') {
+              if (captcha_counter >= 5) {
+              captcha_counter = captcha_counter+1;
+              redraw = true;
+              antwortPuffer = "";
+            } else {
+              aktuellerStatus = KONTO;
+              //aktuellerStatus = PIN_FALSCH;
+              //aktuelleFrage = 0;
+              redraw = true;
+              antwortPuffer = "";
+            }
+          } else if (keys[r][c] == 'C') {
+              redraw = true;
+              antwortPuffer = "";
+          } else {
+            if (antwortPuffer.length() >= 4) {
               Serial.println("Puffer länge: " + String(antwortPuffer.length()));
               antwortPuffer = "";
               Serial.println("Puffer gelöscht");
@@ -255,7 +320,7 @@ void loop() {
   }
   if (!keyIsPressed) {
     lastKey = ' ';
-    //tft.fillScreen(TFT_NAVY); // Clear screen to navy background
+    //tft.fillScreen(bg_color); // Clear screen to navy background
   }
   if (digitalRead(KARTENPIN) == LOW) {
     //Serial.println("Karte eingeführt");
@@ -285,16 +350,17 @@ void loop() {
     break;
   case PINFELD:
     if (redraw) {
-      drawMyLogo("/bg.png");
-      tft.setCursor(20, 70, 2);
-      //tft.fillScreen(TFT_NAVY);
+      //drawMyLogo("/bg.png");
+      tft.setCursor(20, 90, 2);
+      tft.fillScreen(bg_color);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
       tft.println("Bitte ihre PIN eingeben:");
+      //tft.setTextWrap(false);
       //tft.setCursor(20, 100, 2);
       tft.println(" ");
-      tft.print("                    ");
+      tft.print("                  ");
       tft.println(antwortPuffer.c_str());
       redraw = false;
     }
@@ -302,62 +368,133 @@ void loop() {
     break; 
   case PIN_FALSCH:
     if (redraw) {
-      drawMyLogo("/bg.png");
-      tft.setCursor(20, 70, 2);
-      //tft.fillScreen(TFT_NAVY);
+      //drawMyLogo("/bg.png");
+      tft.setCursor(120, 140, 2);
+      tft.fillScreen(TFT_RED);
+      tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
+      tft.setTextSize(4);
+      tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
+      tft.println("PIN falsch");
+      //tft.setCursor(20, 100, 2);
+      //tft.println("                   Nein = ESC");
+      //tft.print("                    Ja = ENTER");
+      //redraw = false;
+      delay(2000);
+      aktuellerStatus = PIN_VERGESSEN;
+    }
+    break;
+  case PIN_VERGESSEN:
+    if (redraw) {
+      //drawMyLogo("/bg.png");
+      tft.setCursor(110, 70, 2);
+      tft.fillScreen(bg_color);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
       tft.println("PIN vergessen?");
       //tft.setCursor(20, 100, 2);
-      tft.println("                   Nein = ESC");
-      tft.print("                    Ja = ENTER");
+      tft.println(" ");
+      tft.println("              Nein = ESC");
+      tft.print("               Ja = ENTER");
       redraw = false;
     }
+    break;
   case FRAGEN:
     if (redraw) {
-      drawMyLogo("/bg.png");
+      //drawMyLogo("/bg.png");
       tft.setCursor(20, 70, 2);
-      //tft.fillScreen(TFT_NAVY);
+      tft.fillScreen(bg_color);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
-      tft.println(fragen[aktuelleFrage]);
+      tft.println(splitToLines(fragen[aktuelleFrage], 23));
       //tft.setCursor(20, 100, 2);
       tft.println(" ");
-      tft.print("                    ");
+      tft.print("                ");
+      tft.print(antwortPuffer);
+      redraw = false;
+    }
+    break;
+  case FRAGE_FALSCH:
+    if (redraw) {
+      //drawMyLogo("/bg.png");
+      tft.setCursor(120, 140, 2);
+      tft.fillScreen(TFT_RED);
+      tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
+      tft.setTextSize(4);
+      tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
+      tft.println("Antwort falsch");
+      //tft.setCursor(20, 100, 2);
+      //tft.println("                   Nein = ESC");
+      //tft.print("                    Ja = ENTER");
+      //redraw = false;
+      delay(2000);
+      aktuellerStatus = FRAGEN;
+    }
+    break;
+  case FRAGE_RICHTIG:
+    if (redraw) {
+      //drawMyLogo("/bg.png");
+      tft.setCursor(120, 140, 2);
+      tft.fillScreen(TFT_GREEN);
+      tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
+      tft.setTextSize(4);
+      tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
+      tft.println("Antwort richtig");
+      //tft.setCursor(20, 100, 2);
+      //tft.println("                   Nein = ESC");
+      //tft.print("                    Ja = ENTER");
+      //redraw = false;
+      delay(2000);
+      aktuellerStatus = FRAGEN;
+    }
+    break;
+  case CAPTCHA:
+    if (redraw) {
+      //drawMyLogo("/bg.png");
+      tft.setCursor(10, 70, 2);
+      tft.fillScreen(bg_color);
+      tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
+      tft.setTextSize(4);
+      tft.loadFont(AA_FONT_SMALL, LittleFS); // Must load the font first
+      tft.println(splitToLines("Sie waren zu schnell, wir müssen Überprüfen, ob sie ein Bot sind: Ich habe eine Random Zahl zwischen 1 und 100, da Bots kein Random können, ist das das ideale Cpathca. Wie ist die Zahl?", 80));
+      //tft.setCursor(20, 100, 2);
+      tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
+      tft.println("Antwort falsch");
+      tft.print("                ");
       tft.print(antwortPuffer);
       redraw = false;
     }
     break;
   case KONTO:
     if (redraw) {
-      drawMyLogo("/bg.png");
-      tft.setCursor(20, 70, 2);
-      //tft.fillScreen(TFT_NAVY);
+      //drawMyLogo("/bg.png");
+      tft.setCursor(60, 70, 2);
+      tft.fillScreen(bg_color);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
       tft.println("Geld Auszahlen?");
       //tft.setCursor(20, 100, 2);
-      tft.println("                   Nein = ESC");
-      tft.print("                    Ja = ENTER");
+      tft.println(" ");
+      tft.println("               Nein = ESC");
+      tft.print("                Ja = ENTER");
       redraw = false;
     }
     break;
   case GELDAUSWURF:
   //drawMyLogo(); // MONEY IMAGE
     if (redraw) {
-      drawMyLogo("/bg.png");
-      tft.setCursor(20, 70, 2);
-      //tft.fillScreen(TFT_NAVY);
+      //drawMyLogo("/bg.png");
+      tft.setCursor(100, 70, 2);
+      tft.fillScreen(bg_color);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
       tft.println("Geld kommt!");
       //tft.setCursor(20, 100, 2);
-      tft.println("                   VORSICHT");
-      tft.print("                    SCHNELL");
+      tft.println("               VORSICHT");
+      tft.print("                SCHNELL");
       redraw = false;
       //MOTOR und warten und dann zu ende
       aktuellerStatus = ENDE;
@@ -368,7 +505,7 @@ void loop() {
     break;
   case ENDE:
     if (redraw) {
-      //tft.fillScreen(TFT_NAVY);
+      //tft.fillScreen(bg_color);
     drawMyLogo("/bg.png");
     tft.setCursor(20, 70, 2);
     tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
