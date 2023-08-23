@@ -10,7 +10,14 @@
 #include <JQ6500_Serial.h>
 HardwareSerial mySerial(1);
 JQ6500_Serial mp3(1);
-
+// enum sound file names:AAWas.mp3, DerCompu-Falsch.mp3, HuiiKnapp.mp3, Neeein.mp3, Neiin.mp3, Nice.mp3, OhJeah.mp3, RichtigGeil.mp3, Uiuiuiuiui.mp3, Wiebidde.mp3
+enum sounds {AAWas, DerCompuFalsch, HuiiKnapp, Neeein, Neiin, Nice, OhJeah, RichtigGeil, Uiuiuiuiui, Wiebidde};
+//liste okay Sounds
+sounds okaySounds[3] = {Nice, OhJeah, RichtigGeil};
+//liste falsch Sounds
+sounds falschSounds[7] = {AAWas, DerCompuFalsch, Neeein, Neiin, Uiuiuiuiui, Wiebidde, HuiiKnapp};
+int anzahl_okaySounds = 3;
+int anzahl_falschSounds = 7;
 
 PNG png;
 #define MAX_IMAGE_WIDTH 480 // Adjust for your images
@@ -251,12 +258,14 @@ void loop() {
               if (aktuelleFrage == anzahl_fragen) {
                 aktuellerStatus = KONTO;
               }
+              mp3.playFileByIndexNumber(okaySounds[random(anzahl_okaySounds)]);
             } else {
               aktuellerStatus = FRAGE_FALSCH;
               //aktuellerStatus = PIN_FALSCH;
               //aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
+              mp3.playFileByIndexNumber(falschSounds[random(anzahl_falschSounds)]);
             }
           } else if (keys[r][c] == 'C') {
               redraw = true;
@@ -272,10 +281,11 @@ void loop() {
           }
         } else if (aktuellerStatus == CAPTCHA) {
           if (keys[r][c] == 'E') {
-              if (captcha_counter >= 5) {
+              if (captcha_counter < anzahl_falschSounds) {
               captcha_counter = captcha_counter+1;
               redraw = true;
               antwortPuffer = "";
+              mp3.playFileByIndexNumber(falschSounds[captcha_counter]);
             } else {
               aktuellerStatus = KONTO;
               //aktuellerStatus = PIN_FALSCH;
