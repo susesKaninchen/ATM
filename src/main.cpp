@@ -11,7 +11,7 @@
 HardwareSerial mySerial(1);
 JQ6500_Serial mp3(1);
 // enum sound file names:AAWas.mp3, DerCompu-Falsch.mp3, HuiiKnapp.mp3, Neeein.mp3, Neiin.mp3, Nice.mp3, OhJeah.mp3, RichtigGeil.mp3, Uiuiuiuiui.mp3, Wiebidde.mp3
-enum sounds {AAWas, DerCompuFalsch, HuiiKnapp, Neeein, Neiin, Nice, OhJeah, RichtigGeil, Uiuiuiuiui, Wiebidde};
+enum sounds {AAWas, DerCompuFalsch, HuiiKnapp, Neeein, Neiin, Nice, OhJeah, RichtigGeil, Uiuiuiuiui, Wiebidde, MONEY_START, MONEY_PAUSE, MONEY_WEITER, SOVELGELD};
 //liste okay Sounds
 sounds okaySounds[3] = {Nice, OhJeah, RichtigGeil};
 //liste falsch Sounds
@@ -19,6 +19,7 @@ sounds falschSounds[7] = {AAWas, DerCompuFalsch, Neeein, Neiin, Uiuiuiuiui, Wieb
 int anzahl_okaySounds = 3;
 int anzahl_falschSounds = 7;
 
+File pngfile;
 PNG png;
 #define MAX_IMAGE_WIDTH 480 // Adjust for your images
 int16_t xpos = 0;
@@ -63,6 +64,13 @@ char keys[4][4] = {
   {'*', '7', '4', '1'}
 };
 
+//MOTOR
+const int motorPin = 27; // PWM-Pin für den Motor
+const int frequency = 5000; // PWM-Frequenz in Hz (5kHz)
+const int channel = 0; // PWM-Kanal für den ESP32
+const int resolution = 8; // 8-bit Auflösung für den PWM, das gibt Werte zwischen 0-255
+
+
 void setup() {
   Serial.begin(115200);
 
@@ -82,6 +90,10 @@ void setup() {
   for (int r = 0; r < 4; r++) {
     pinMode(rowPins[r], INPUT);
   }
+
+  // Initialisierung des PWM-Ausgangs
+  ledcSetup(channel, frequency, resolution);
+  ledcAttachPin(motorPin, channel);
 
   tft.begin();
 
@@ -105,13 +117,21 @@ void setup() {
 mySerial.begin(9600, SERIAL_8N1, 33, 32);
  mp3.begin(9600);
   mp3.reset();
-  mp3.setVolume(20);
+  delay(100);
+  mp3.setVolume(30);
+  delay(100);
   mp3.setLoopMode(MP3_LOOP_NONE);
-  mp3.playFileByIndexNumber(1); 
+  //mp3.playFileByIndexNumber(1); 
 }
 
+void setMotorSpeed(int speedPercentage) {
+  if (speedPercentage < 0) speedPercentage = 0;
+  if (speedPercentage > 100) speedPercentage = 100;
 
-File pngfile;
+  // Umrechnung von Prozent in PWM-Wert (0-255)
+  int pwmValue = map(speedPercentage, 0, 100, 0, 255);
+  ledcWrite(channel, pwmValue);
+}
 
 void * pngOpen(const char *filename, int32_t *size) {
   Serial.printf("Attempting to open %s\n", filename);
@@ -215,11 +235,13 @@ void loop() {
               aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
+              mp3.playFileByIndexNumber(okaySounds[random(anzahl_okaySounds)]);
             } else {
               aktuellerStatus = PIN_FALSCH;
               aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
+              mp3.playFileByIndexNumber(falschSounds[captcha_counter]);
             }
             redraw = true;
             antwortPuffer = "";
@@ -428,7 +450,7 @@ void loop() {
   case FRAGE_FALSCH:
     if (redraw) {
       //drawMyLogo("/bg.png");
-      tft.setCursor(120, 140, 2);
+      tft.setCursor(100, 140, 2);
       tft.fillScreen(TFT_RED);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
@@ -462,7 +484,7 @@ void loop() {
   case CAPTCHA:
     if (redraw) {
       //drawMyLogo("/bg.png");
-      tft.setCursor(10, 70, 2);
+      tft.setCursor(5, 70, 2);
       tft.fillScreen(bg_color);
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
@@ -470,7 +492,11 @@ void loop() {
       tft.println(splitToLines("Sie waren zu schnell, wir müssen Überprüfen, ob sie ein Bot sind: Ich habe eine Random Zahl zwischen 1 und 100, da Bots kein Random können, ist das das ideale Cpathca. Wie ist die Zahl?", 80));
       //tft.setCursor(20, 100, 2);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
-      tft.println("Antwort falsch");
+      if (captcha_counter != 0) {
+        tft.println("Antwort falsch");
+      } else {
+        tft.println(" ");
+      }
       tft.print("                ");
       tft.print(antwortPuffer);
       redraw = false;
@@ -509,7 +535,16 @@ void loop() {
       //MOTOR und warten und dann zu ende
       aktuellerStatus = ENDE;
       redraw = true;
+      mp3.playFileByIndexNumber(MONEY_START);
+      setMotorSpeed(100);
       delay(5000);
+      mp3.playFileByIndexNumber(MONEY_PAUSE);
+      setMotorSpeed(0);
+      delay(6000);
+      mp3.playFileByIndexNumber(MONEY_WEITER);
+      setMotorSpeed(100);
+      delay(5000);
+      mp3.playFileByIndexNumber(SOVELGELD);
     }
     /* code */
     break;
@@ -521,6 +556,8 @@ void loop() {
     tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
       tft.println("Eine tolle Hochzeit wuenschen euch Gina, Marco, Max, Jake und Andre");
       redraw = false;
+      delay(10000);
+      setMotorSpeed(0);
     }
     break;
   default:
