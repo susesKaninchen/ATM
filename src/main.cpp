@@ -10,14 +10,33 @@
 #include <JQ6500_Serial.h>
 HardwareSerial mySerial(1);
 JQ6500_Serial mp3(1);
-// enum sound file names:AAWas.mp3, DerCompu-Falsch.mp3, HuiiKnapp.mp3, Neeein.mp3, Neiin.mp3, Nice.mp3, OhJeah.mp3, RichtigGeil.mp3, Uiuiuiuiui.mp3, Wiebidde.mp3
-enum sounds {AAWas, DerCompuFalsch, HuiiKnapp, Neeein, Neiin, Nice, OhJeah, RichtigGeil, Uiuiuiuiui, Wiebidde, MONEY_START, MONEY_PAUSE, MONEY_WEITER, SOVELGELD};
+// enum sound file names: AAfast.mp3, AAWas.mp3, AllesLiebe.mp3, BiBupnichtZahlen.mp3, DasReichAuch.mp3, DerCompu-Falsch.mp3, esWirdWarmer.mp3, FeuerFrei.mp3, heiss.mp3, HuiiKnapp.mp3, huiKnapp.mp3, LeiderAchRichtig.mp3, ManyManyManyWo.mp3, mEga.mp3, Neeein.mp3, Neiin.mp3, Nice.mp3, nope.mp3, OhJeah.mp3, RichtigGeil.mp3, sovielgeld.mp3, Uiuiuiuiui.mp3, wasDasWarsSchon.mp3, Wiebidde.mp3, wiederVersuchen.mp3
+enum sounds {AAfast, AAWas, AllesLiebe, BiBupnichtZahlen, DasReichAuch, DerCompuFalsch, esWirdWarmer, FeuerFrei, heiss, HuiiKnapp, huiKnapp, LeiderAchRichtig, ManyManyManyWo, mEga, Neeein, Neiin, Nice, nope, OhJeah, RichtigGeil, sovielgeld, Uiuiuiuiui, wasDasWarsSchon, Wiebidde, wiederVersuchen};
 //liste okay Sounds
-sounds okaySounds[3] = {Nice, OhJeah, RichtigGeil};
+sounds okaySounds[7] = {AAWas, AllesLiebe, Nice, OhJeah, RichtigGeil, LeiderAchRichtig, mEga};
 //liste falsch Sounds
-sounds falschSounds[7] = {AAWas, DerCompuFalsch, Neeein, Neiin, Uiuiuiuiui, Wiebidde, HuiiKnapp};
-int anzahl_okaySounds = 3;
-int anzahl_falschSounds = 7;
+sounds falschSounds[14] = {AAfast, AAWas, BiBupnichtZahlen, DerCompuFalsch, esWirdWarmer, heiss, HuiiKnapp, huiKnapp, Neeein, Neiin, nope, Uiuiuiuiui, Wiebidde, wiederVersuchen};
+int anzahl_okaySounds = 7;
+int aktuell_okaySound = -1;
+int anzahl_falschSounds = 14;
+int aktuell_falschSound = -1;
+
+int getOkSound() {
+  aktuell_okaySound = aktuell_okaySound+1;
+  if (aktuell_okaySound >= anzahl_okaySounds) {
+    aktuell_okaySound = 0;
+  }
+  return okaySounds[aktuell_okaySound];
+}
+
+int getFalschSound() {
+  aktuell_falschSound = aktuell_falschSound+1;
+  if (aktuell_falschSound >= anzahl_falschSounds) {
+    aktuell_falschSound = 0;
+  }
+  return falschSounds[aktuell_falschSound];
+}
+
 
 File pngfile;
 PNG png;
@@ -235,13 +254,13 @@ void loop() {
               aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
-              mp3.playFileByIndexNumber(okaySounds[random(anzahl_okaySounds)]);
+              mp3.playFileByIndexNumber(getOkSound());
             } else {
               aktuellerStatus = PIN_FALSCH;
               aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
-              mp3.playFileByIndexNumber(falschSounds[captcha_counter]);
+              mp3.playFileByIndexNumber(getFalschSound());
             }
             redraw = true;
             antwortPuffer = "";
@@ -280,14 +299,14 @@ void loop() {
               if (aktuelleFrage == anzahl_fragen) {
                 aktuellerStatus = KONTO;
               }
-              mp3.playFileByIndexNumber(okaySounds[random(anzahl_okaySounds)]);
+              mp3.playFileByIndexNumber(getOkSound());
             } else {
               aktuellerStatus = FRAGE_FALSCH;
               //aktuellerStatus = PIN_FALSCH;
               //aktuelleFrage = 0;
               redraw = true;
               antwortPuffer = "";
-              mp3.playFileByIndexNumber(falschSounds[random(anzahl_falschSounds)]);
+              mp3.playFileByIndexNumber(getFalschSound());
             }
           } else if (keys[r][c] == 'C') {
               redraw = true;
@@ -307,7 +326,7 @@ void loop() {
               captcha_counter = captcha_counter+1;
               redraw = true;
               antwortPuffer = "";
-              mp3.playFileByIndexNumber(falschSounds[captcha_counter]);
+              mp3.playFileByIndexNumber(getFalschSound());
             } else {
               aktuellerStatus = KONTO;
               //aktuellerStatus = PIN_FALSCH;
@@ -527,24 +546,26 @@ void loop() {
       tft.setTextColor(TFT_WHITE);  // Set text colour to white and background to blue
       tft.setTextSize(4);
       tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
-      tft.println("Geld kommt!");
+      tft.println("Geld wird Vorbereitet!");
       //tft.setCursor(20, 100, 2);
-      tft.println("               VORSICHT");
-      tft.print("                SCHNELL");
+      //tft.println("               VORSICHT");
+      //tft.print("                SCHNELL");
       redraw = false;
       //MOTOR und warten und dann zu ende
       aktuellerStatus = ENDE;
       redraw = true;
-      mp3.playFileByIndexNumber(MONEY_START);
+      delay(10000);
+      mp3.playFileByIndexNumber(FeuerFrei);
+      delay(2000);
       setMotorSpeed(100);
-      delay(5000);
-      mp3.playFileByIndexNumber(MONEY_PAUSE);
+      delay(8000);
+      mp3.playFileByIndexNumber(wasDasWarsSchon);
       setMotorSpeed(0);
       delay(6000);
-      mp3.playFileByIndexNumber(MONEY_WEITER);
+      mp3.playFileByIndexNumber(ManyManyManyWo);
       setMotorSpeed(100);
       delay(5000);
-      mp3.playFileByIndexNumber(SOVELGELD);
+      mp3.playFileByIndexNumber(sovielgeld);
     }
     /* code */
     break;
@@ -554,7 +575,7 @@ void loop() {
     drawMyLogo("/bg.png");
     tft.setCursor(20, 70, 2);
     tft.loadFont(AA_FONT_LARGE, LittleFS); // Must load the font first
-      tft.println("Eine tolle Hochzeit wuenschen euch Gina, Marco, Max, Jake und Andre");
+      tft.println(splitToLines("Eine tolle Hochzeit wuenschen euch Gina, Marco, Max, Jake und Andre", 23));
       redraw = false;
       delay(10000);
       setMotorSpeed(0);
