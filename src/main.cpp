@@ -92,8 +92,8 @@ uint16_t bg_color = 0x3758;//0x471A;
 
 //Fragen
 int anzahl_fragen = 6;
-String fragen[6] = {"An welchem Tag seid ihr zusammen gekommen?        (DDMMYYYY)", "Wann habt ihr die Schule abgeschlossen? (YYYY)", "Wann kam euer 2. Geborenes zur Welt?     (TTMMYYY)", "Wie viele Jahre seid ihr zusammen?", "In welchen Jahr seid ihr in euer jetziges Haus gezogen?", "Wann habt ihr euch verlobt? (DDMMYYYY)"};
-String antworten[6] = {"25042010", "2014", "20022016", "13", "2021", "30092022"};
+String fragen[6] = {"An welchem Tag seid ihr zusammen gekommen?        (DDMMYYYY)", "Wann habt ihr die Schule abgeschlossen? (YYYY)", "Wann kam euer 2. Geborenes zur Welt?     (TTMMYYYY)", "Wie viele Jahre seid ihr zusammen?", "In welchen Jahr seid ihr in euer jetziges Haus gezogen?", "Wann habt ihr euch verlobt? (DDMMYYYY)"};
+String antworten[6] = {"25042010", "2013", "20022016", "13", "2021", "30092022"};
 //Puffer für die Antworten
 String antwortPuffer = "          ";
 String pin = "5 2 3 4 ";
@@ -622,14 +622,18 @@ void loop() {
       redraw = true;
       delay(3000);
       mp3.playFileByIndexNumber(FeuerFrei+1);
-      delay(2000);
-      setMotorSpeed(80);
+      delay(1800);
+      setMotorSpeed(100);
+      delay(200);
+      setMotorSpeed(90);
       delay(5000);
       mp3.playFileByIndexNumber(wasDasWarsSchon+1);
       setMotorSpeed(0);
       delay(4000);
       mp3.playFileByIndexNumber(ManyManyManyWo+1);
-      setMotorSpeed(80);
+      setMotorSpeed(100);
+      delay(200);
+      setMotorSpeed(90);
       delay(5000);
       mp3.playFileByIndexNumber(sovielgeld+1);
       delay(10000);
